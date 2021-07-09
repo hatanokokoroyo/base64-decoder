@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Base64转文件工具</title>
+</head>
+<body>
+<div>
+    <p>文件后缀: pdf/gif/png...</p>
+    <p>现在pdf/gif/png/jpg文件支持解码后直接浏览器打开, 其他类型文件暂时只能下载一个无后缀名的文件</p>
+    <label for="file_type"></label><input id="file_type" type="text" value="pdf"/>
+    <p>base64 code</p>
+    <label id="base64_label" for="base64"></label><textarea id="base64" cols="100" rows="10"></textarea>
+    <br>
+    <br>
+    <input id="clear" type="button" value="清空" onclick="clearUp()"/>
+    <input id="sumbit" type="button" value="解码" onclick="decode()"/>
+</div>
+</body>
+<script>
+    function clearUp() {
+        document.getElementById("base64").value = ''
+    }
+    function decode() {
+        let fileType = document.getElementById("file_type").value;
+        let base64 = document.getElementById("base64").value;
+        let url = "/parse";
+        let bodyData = {
+            "file_type": fileType,
+            "base64": base64
+        };
+        const Http = new XMLHttpRequest();
+
+        Http.open("POST", url);
+        Http.setRequestHeader("Content-Type", "application/json;")
+        Http.responseType = 'blob'
+        Http.onreadystatechange = (e) => {
+            const cd = Http.getResponseHeader('Content-Disposition');
+            if (cd && cd.includes('fileName') && !options.fileName) options.fileName = cd.split('fileName=')[1];
+            let fileName = decodeURIComponent(options.fileName || 'download-file');
+            var type = 'application/pdf'
+            if (fileType === 'gif' || fileType === 'png' || fileType === 'jpg') {
+                type = 'image/' + fileType
+            }
+            if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
+                let blob = new Blob([Http.response], {type: type});
+                let url = URL.createObjectURL(blob);
+                window.open(url);
+
+                window.URL.revokeObjectURL(url)
+            }
+        }
+        Http.send(JSON.stringify(bodyData));
+    }
+</script>
+</html>
