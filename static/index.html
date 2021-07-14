@@ -6,24 +6,42 @@
 </head>
 <body>
 <div>
-    <p>文件后缀: pdf/gif/png...</p>
-    <p>现在pdf/gif/png/jpg文件支持解码后直接浏览器打开, 其他类型文件暂时只能下载一个无后缀名的文件</p>
-    <label for="file_type"></label><input id="file_type" type="text" value="pdf"/>
-    <p>base64 code</p>
-    <label id="base64_label" for="base64"></label><textarea id="base64" cols="100" rows="10"></textarea>
-    <br>
-    <br>
-    <input id="clear" type="button" value="清空" onclick="clearUp()"/>
-    <input id="sumbit" type="button" value="解码" onclick="decode()"/>
+    <h4>食用说明:</h4>
+    <p>目前有两种使用方法, 第一种是复制base64字符串到输入框并输入文件后缀, 点击"直接解码base64", 即可打开对应文件</p>
+    <p>第二种是输入包含base64的JSON字符串, 点击"提取json中的base64", 在下方的文本框中会展示base64字符串所在的路径和编号</p>
+    <p>输入对应的编号, 点击"选择key并解码base64", 即可打开对应文件(同样需要输入文件后缀)</p>
+    <h4>注意事项:</h4>
+    <p>支持的文件格式有pdf/gif/png/jpg, 解码后会在浏览器打开, 其他类型的文件, 会直接下载一个无后缀的文件, 需要自行改后缀打开</p>
+    <br/>
+    <p>文件格式:</p>
+    <label for="file_type"></label><input id="file_type" type="text" value="pdf" placeholder="输入文件后缀"/>
+    <br/>
+    <label id="base64_label" for="base64"></label><textarea id="base64" cols="60" rows="10" placeholder="输入base64或包含base64的JSON字符串"></textarea>
+    <br/>
+    <input id="clear" type="button" value="清空所有" onclick="clearUp()"/>
+    <input id="sumbit" type="button" value="直接解码base64" onclick="decode(null)"/>
+    <input id="extract" type="button" value="提取json中的base64" onclick="extractBase64()"/>
+    <p>判断逻辑是长度大于100的字符串, 不一定准确, 请自行核对</p>
+    <label id="base64_key_list_label" for="base64_key_list"></label><textarea id="base64_key_list" cols="200" rows="10"></textarea>
+    <br/>
+    <label for="number"></label><input id="number" type="text" value="0"/>
+    <input id="put" type="button" value="选择key并解码base64" onclick="selectDecode()"/>
 </div>
 </body>
 <script>
+    var base64KeyValue = []
+
     function clearUp() {
         document.getElementById("base64").value = ''
+        document.getElementById("base64_key_list").value = ''
+        base64KeyValue = []
     }
-    function decode() {
+
+    function decode(base64) {
+        if (base64 === null || base64 === "") {
+            base64 = document.getElementById("base64").value;
+        }
         let fileType = document.getElementById("file_type").value;
-        let base64 = document.getElementById("base64").value;
         let url = "/parse";
         let bodyData = {
             "file_type": fileType,
@@ -35,9 +53,9 @@
         Http.setRequestHeader("Content-Type", "application/json;")
         Http.responseType = 'blob'
         Http.onreadystatechange = (e) => {
-            const cd = Http.getResponseHeader('Content-Disposition');
-            if (cd && cd.includes('fileName') && !options.fileName) options.fileName = cd.split('fileName=')[1];
-            let fileName = decodeURIComponent(options.fileName || 'download-file');
+            // const cd = Http.getResponseHeader('Content-Disposition');
+            // if (cd && cd.includes('fileName') && !options.fileName) options.fileName = cd.split('fileName=')[1];
+            // let fileName = decodeURIComponent(options.fileName || 'download-file');
             var type = 'application/pdf'
             if (fileType === 'gif' || fileType === 'png' || fileType === 'jpg') {
                 type = 'image/' + fileType
@@ -47,10 +65,41 @@
                 let url = URL.createObjectURL(blob);
                 window.open(url);
 
-                window.URL.revokeObjectURL(url)
+                // window.URL.revokeObjectURL(url)
             }
         }
         Http.send(JSON.stringify(bodyData));
+    }
+    function extractBase64() {
+        let base64 = document.getElementById("base64").value;
+        let url = "/extract/";
+        let bodyData = {
+            "json_str": base64
+        };
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url);
+
+        xhr.setRequestHeader("Content-Type", "application/json;")
+        xhr.onreadystatechange = (e) => {
+            if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                let json = JSON.parse(xhr.responseText);
+                base64KeyValue = json
+                let keyList = [];
+                let info = "";
+                for (let i = 0; i < json.length; i++) {
+                    let element = json[i];
+                    keyList.push(element[0])
+                    info = info + i + ": " + element[0] + "\n"
+                }
+                document.getElementById("base64_key_list").value = info
+            }
+        }
+        xhr.send(JSON.stringify(bodyData));
+    }
+    function selectDecode() {
+        let number = document.getElementById("number").value;
+        let base64 = base64KeyValue[number][1]
+        decode(base64)
     }
 </script>
 </html>
