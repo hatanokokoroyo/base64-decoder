@@ -1,0 +1,1 @@
+docker run -i -t -d -p 8000:8000 kokoro/base64-decoder:0.0.1

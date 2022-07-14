@@ -1,0 +1,1 @@
+docker build ./ -t kokoro/base64-decoder:0.0.1
